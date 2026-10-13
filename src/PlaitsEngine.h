@@ -59,7 +59,13 @@ private:
 
     void runBlocks (const Params& p);
 
-    std::unique_ptr<plaits::Voice> voice;
+    // The firmware keeps its Voice in a global, i.e. zeroed memory, and several engines rely on that: some members
+    // (e.g. the 2-op FM engine's downsampler memory) are never explicitly initialised. A plain `new` hands back whatever
+    // junk the heap held, which can inject a NaN into the low-pass gate and silence every engine that uses it. So the
+    // Voice is always constructed in zero-filled memory.
+    struct VoiceDeleter { void operator() (plaits::Voice*) const; };
+    static plaits::Voice* makeZeroedVoice();
+    std::unique_ptr<plaits::Voice, VoiceDeleter> voice;
     std::vector<char> sharedRam;      // the firmware's shared engine RAM
 
     double hostRate = 48000.0;

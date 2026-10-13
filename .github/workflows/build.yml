@@ -17,8 +17,10 @@ jobs:
 
       - name: Build engine test, then run it
         run: |
-          cmake --build build --target engine_test -j4
+          cmake --build build --target engine_test sweep_test -j4
           ./build/engine_test
+          JUNK=0xFF ./build/sweep_test 48000
+          JUNK=0x7F ./build/sweep_test 44100
 
       - name: Build AU + VST3
         run: cmake --build build --target Plaits_AU Plaits_VST3 -j4

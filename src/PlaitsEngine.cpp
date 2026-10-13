@@ -1,7 +1,9 @@
 #include "PlaitsEngine.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
+#include <new>
 #include "plaits/dsp/voice.h"
 #include "plaits/dsp/dsp.h"
 #include "stmlib/utils/buffer_allocator.h"
@@ -15,8 +17,22 @@ namespace
     constexpr float kLpPitch = 0.7f;              // pitch CV one-pole (ui.cc)
 }
 
+plaits::Voice* PlaitsEngine::makeZeroedVoice()
+{
+    // calloc, not new + memset: with a memset before the constructor, GCC treats the old contents as dead and deletes it
+    // (lifetime dead-store elimination), which silently brings the junk back.
+    void* mem = std::calloc (1, sizeof (plaits::Voice));
+    if (mem == nullptr) throw std::bad_alloc();
+    return new (mem) plaits::Voice();
+}
+
+void PlaitsEngine::VoiceDeleter::operator() (plaits::Voice* v) const
+{
+    if (v != nullptr) { v->~Voice(); std::free (static_cast<void*> (v)); }
+}
+
 PlaitsEngine::PlaitsEngine()
-    : voice (new plaits::Voice()), sharedRam (32768, 0)
+    : voice (makeZeroedVoice()), sharedRam (32768, 0)
 {
 }
 
@@ -37,7 +53,7 @@ void PlaitsEngine::prepare (double sr)
     smoothInit = false;
 
     // (Re)build the voice so a re-prepare starts from a clean state, like a power-up.
-    voice.reset (new plaits::Voice());
+    voice.reset (makeZeroedVoice());
     std::fill (sharedRam.begin(), sharedRam.end(), (char) 0);
     stmlib::BufferAllocator allocator (sharedRam.data(), sharedRam.size());
     voice->Init (&allocator);
