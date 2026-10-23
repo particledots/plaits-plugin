@@ -52,6 +52,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout PlaitsAudioProcessor::create
     p.push_back (std::make_unique<APF> (juce::ParameterID { "fine", 1 }, "Fine Tune",
                  juce::NormalisableRange<float> (-1.f, 1.f, 0.001f), 0.f,
                  juce::AudioParameterFloatAttributes().withLabel ("st")));
+    // Added in 0.2.0. Off = exactly the 0.1.0 sound; old projects load with it Off.
+    p.push_back (std::make_unique<APC> (juce::ParameterID { "pitch_snap", 2 }, "Pitch Snap",
+                 juce::StringArray { "Off", "Steps", "Semitones" }, 0));
     p.push_back (bipolar ("fm_amount",     "FM Amount"));
     p.push_back (bipolar ("timbre_amount", "Timbre Amount"));
     p.push_back (bipolar ("morph_amount",  "Morph Amount"));
@@ -94,6 +97,7 @@ PlaitsEngine::Params PlaitsAudioProcessor::readParams() const
     p.engine = (int) v ("engine");
     p.harmonics = v ("harmonics"); p.timbre = v ("timbre"); p.morph = v ("morph");
     p.transpose = (float) std::lround (v ("transpose")) + v ("fine");
+    p.pitchSnap = (int) v ("pitch_snap");
     p.fmAmount = v ("fm_amount"); p.timbreAmount = v ("timbre_amount"); p.morphAmount = v ("morph_amount");
     p.decay = v ("decay"); p.lpgColour = v ("lpg_colour");
     p.envelope = (int) v ("envelope");

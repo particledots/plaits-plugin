@@ -18,11 +18,18 @@ public:
         EnvDrone = 2    // nothing patched: the voice just sounds continuously (MIDI sets pitch only)
     };
 
+    // Pitch Snap (our addition, not in the module): what the whole Transpose + Fine Tune offset settles on.
+    //   Steps     - octaves and fifths across the +-48 range: 0, 7, 12, 19, 24, 31, 36, 43, 48 (both directions)
+    //   Semitones - whole semitones
+    enum PitchSnap { SnapOff = 0, SnapSteps = 1, SnapSemitones = 2 };
+    static float snapPitch (float semitones, int mode);   // Off returns its input unchanged
+
     struct Params
     {
         int   engine = 8;                 // 0..23, the firmware's engine order (see the README)
         float harmonics = 0.5f, timbre = 0.5f, morph = 0.5f;           // the three main knobs, 0..1
-        float transpose = 0.0f;           // semitones, added to the played MIDI note
+        float transpose = 0.0f;           // semitones (Transpose + Fine Tune), added to the played MIDI note
+        int   pitchSnap = SnapOff;        // what that offset settles on (see snapPitch)
         float fmAmount = 0.0f, timbreAmount = 0.0f, morphAmount = 0.0f; // the three attenuverters, -1..1
         float decay = 0.5f, lpgColour = 0.5f;                           // the module's two hidden parameters, 0..1
         int   envelope = EnvPing;

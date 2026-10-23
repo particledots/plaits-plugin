@@ -88,11 +88,30 @@ PlaitsEditor::PlaitsEditor (PlaitsAudioProcessor& p) : AudioProcessorEditor (&p)
 
     addChoice (engine,   "engine",   "ENGINE",   PlaitsAudioProcessor::engineNames());
     addChoice (envelope, "envelope", "ENVELOPE", PlaitsAudioProcessor::envelopeNames());
+    addChoice (pitchSnap, "pitch_snap", "PITCH SNAP", { "Off", "Steps", "Semitones" });
+    pitchSnap.box.setTooltip ("What Transpose + Fine Tune settle on. Steps = octaves and fifths (0, 7, 12, 19, 24 ... up to 48, both directions); "
+                              "Semitones = whole semitones. With Pitch Snap on, Fine Tune only matters when it tips the total over a step. "
+                              "The Transpose readout shows the offset that plays.");
+    // With Pitch Snap on, the Transpose readout shows the offset that actually plays (Transpose + Fine, snapped).
+    transpose.slider.textFromValueFunction = [this] (double v)
+    {
+        const int mode = (int) proc.apvts.getRawParameterValue ("pitch_snap")->load();
+        if (mode == PlaitsEngine::SnapOff) return juce::String ((int) std::lround (v));
+        const float total = (float) std::lround (v) + proc.apvts.getRawParameterValue ("fine")->load();
+        const int st = (int) std::lround (PlaitsEngine::snapPitch (total, mode));
+        return st > 0 ? "+" + juce::String (st) : juce::String (st);
+    };
+    snapReadoutAtt = std::make_unique<juce::ParameterAttachment> (*proc.apvts.getParameter ("pitch_snap"),
+                                                                  [this] (float) { transpose.slider.updateText(); });
+    fineReadoutAtt = std::make_unique<juce::ParameterAttachment> (*proc.apvts.getParameter ("fine"),
+                                                                  [this] (float) { transpose.slider.updateText(); });
+    snapReadoutAtt->sendInitialUpdate();
+    fineReadoutAtt->sendInitialUpdate();
 
     addAndMakeVisible (monoOut);
     monoOutAtt = std::make_unique<ButtonAtt> (proc.apvts, "mono_out", monoOut);
 
-    setSize (640, 560);
+    setSize (640, 612);
 }
 
 PlaitsEditor::~PlaitsEditor() { setLookAndFeel (nullptr); }
@@ -143,6 +162,7 @@ void PlaitsEditor::paint (juce::Graphics& g)
     g.fillRoundedRectangle (12.0f, 136.0f, w, 150.0f, 10.0f);   // harmonics / timbre / morph
     g.fillRoundedRectangle (12.0f, 294.0f, w, 120.0f, 10.0f);   // attenuverters
     g.fillRoundedRectangle (12.0f, 422.0f, w, 126.0f, 10.0f);   // transpose / fine / decay / lpg colour
+    g.fillRoundedRectangle (12.0f, 556.0f, w, 48.0f,  10.0f);   // pitch snap
 }
 
 void PlaitsEditor::resized()
@@ -163,6 +183,8 @@ void PlaitsEditor::resized()
     placeChoice (engine,   juce::Rectangle<int> (24, 66, 300, 48));
     placeChoice (envelope, juce::Rectangle<int> (336, 66, 170, 48));
     monoOut.setBounds (W - 12 - 100 - 8, 84, 100, 36);
+    pitchSnap.label.setBounds (24, 566, 90, 28);
+    pitchSnap.box.setBounds (118, 566, 170, 28);
 
     const int col3 = (W - 24) / 3;
     Knob* mainRow[3] = { &harmonics, &timbre, &morph };

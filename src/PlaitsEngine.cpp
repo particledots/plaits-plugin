@@ -31,6 +31,18 @@ void PlaitsEngine::VoiceDeleter::operator() (plaits::Voice* v) const
     if (v != nullptr) { v->~Voice(); std::free (static_cast<void*> (v)); }
 }
 
+float PlaitsEngine::snapPitch (float semitones, int mode)
+{
+    if (mode == SnapSemitones) return std::round (semitones);
+    if (mode != SnapSteps) return semitones;
+    static const float kSteps[] = { 0.f, 7.f, 12.f, 19.f, 24.f, 31.f, 36.f, 43.f, 48.f };   // mirrored below zero
+    const float a = std::fabs (semitones);
+    float best = kSteps[0];
+    for (float d : kSteps)
+        if (std::fabs (a - d) < std::fabs (a - best)) best = d;
+    return semitones < 0.f ? -best : best;
+}
+
 PlaitsEngine::PlaitsEngine()
     : voice (makeZeroedVoice()), sharedRam (32768, 0)
 {
@@ -87,16 +99,17 @@ void PlaitsEngine::runBlocks (const Params& p)
         const float note = last->note, vel = last->vel;
         inQueueHead += B;
 
+        const float transposeNow = snapPitch (p.transpose, p.pitchSnap);   // Off: exactly p.transpose
         if (! smoothInit)
         {
             lpHarmonics = p.harmonics; lpTimbre = p.timbre; lpMorph = p.morph;
-            lpTranspose = p.transpose; lpFm = p.fmAmount; lpTimbreAmt = p.timbreAmount; lpMorphAmt = p.morphAmount;
+            lpTranspose = transposeNow; lpFm = p.fmAmount; lpTimbreAmt = p.timbreAmount; lpMorphAmt = p.morphAmount;
             lpDecay = p.decay; lpColour = p.lpgColour;
             pitchLp = note;
             smoothInit = true;
         }
         lp (lpHarmonics, p.harmonics, kLpHarmonics);  lp (lpTimbre, p.timbre, kLpTimbre);  lp (lpMorph, p.morph, kLpMorph);
-        lp (lpTranspose, p.transpose, kLpTranspose);
+        lp (lpTranspose, transposeNow, kLpTranspose);
         lp (lpFm, p.fmAmount, kLpAmount);  lp (lpTimbreAmt, p.timbreAmount, kLpAmount);  lp (lpMorphAmt, p.morphAmount, kLpAmount);
         lp (lpDecay, p.decay, kLpHidden);  lp (lpColour, p.lpgColour, kLpHidden);
         lp (pitchLp, note, kLpPitch);

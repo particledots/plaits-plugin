@@ -46,7 +46,8 @@ private:
     PlaitsLookAndFeel laf;
 
     Knob harmonics, timbre, morph, fmAmount, timbreAmount, morphAmount, transpose, fine, decay, lpgColour;
-    Choice engine, envelope;
+    Choice engine, envelope, pitchSnap;
+    std::unique_ptr<juce::ParameterAttachment> snapReadoutAtt, fineReadoutAtt;   // keep the Transpose readout in step
 
     juce::ToggleButton monoOut { "MONO OUT" };
     std::unique_ptr<ButtonAtt> monoOutAtt;
