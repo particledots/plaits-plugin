@@ -16,12 +16,18 @@ jobs:
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCOPY_PLUGIN_AFTER_BUILD=OFF -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
 
       - name: Build engine test, then run it
+        shell: bash {0}
         run: |
-          cmake --build build --target engine_test sweep_test pitch_snap_test -j4
-          ./build/engine_test
-          ./build/pitch_snap_test
-          JUNK=0xFF ./build/sweep_test 48000
-          JUNK=0x7F ./build/sweep_test 44100
+          # Any failing line is also repeated as an annotation, so it can be read without opening the full log.
+          rc=0
+          step() { "$@" > step.log 2>&1; local r=$?; cat step.log;
+                   if [ $r -ne 0 ]; then rc=$r; grep -n -i -E "FAIL|error|Assertion|Abort" step.log | head -15 | while IFS= read -r l; do echo "::error::$*: $l"; done; fi; }
+          step cmake --build build --target engine_test sweep_test pitch_snap_test -j4
+          [ $rc -eq 0 ] && step ./build/engine_test
+          [ $rc -eq 0 ] && step ./build/pitch_snap_test
+          [ $rc -eq 0 ] && JUNK=0xFF step ./build/sweep_test 48000
+          [ $rc -eq 0 ] && JUNK=0x7F step ./build/sweep_test 44100
+          exit $rc
 
       - name: Build AU + VST3
         run: cmake --build build --target Plaits_AU Plaits_VST3 -j4
