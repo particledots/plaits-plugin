@@ -93,9 +93,10 @@ int main()
     // 2. Off is the old sound
     {
         bool ok = true;
-        for (int engine : { 0, 9, 14, 21 })
+        for (int engine : { 0, 5, 9, 14, 21 })
             for (int env : { (int) E::EnvPing, (int) E::EnvDrone })
             {
+                if (engine == 21 && env == E::EnvDrone) continue;   // the bass drum is silent without a trigger, so pitch cannot show
                 auto make = [&] (float t, int snap) { return [=] (int) { E::Params p = drone (engine, t, snap); p.envelope = env; return p; }; };
                 const auto off12  = render (48000.0, 1.0, 57.0f, make (12.0f, E::SnapOff));
                 const auto st12   = render (48000.0, 1.0, 57.0f, make (12.0f, E::SnapSteps));      // 12 is a step
