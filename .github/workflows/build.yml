@@ -17,8 +17,9 @@ jobs:
 
       - name: Build engine test, then run it
         run: |
-          cmake --build build --target engine_test sweep_test -j4
+          cmake --build build --target engine_test sweep_test pitch_snap_test -j4
           ./build/engine_test
+          ./build/pitch_snap_test
           JUNK=0xFF ./build/sweep_test 48000
           JUNK=0x7F ./build/sweep_test 44100
 
@@ -55,3 +56,10 @@ jobs:
         with:
           name: Plaits-macOS
           path: Plaits-macOS.zip
+
+      # After the upload on purpose: a problem here shows up red but can never stop the plug-in artifact from being produced.
+      - name: Processor test (Pitch Snap through the real parameters)
+        timeout-minutes: 10
+        run: |
+          cmake --build build --target plugin_test -j4
+          ./build/plugin_test
